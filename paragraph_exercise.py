@@ -65,10 +65,11 @@ def run_paragraph_exercise(win, exercise_txt):
     # win.addstr(user_input)
     # win.addstr(f'\n{len(user_input)}')
 
+    win.move(1,0)
     if (user_input == exercise_txt):
-        win.addstr('\nCorrect!')
+        win.addstr('Correct!')
     else:
-        win.addstr('\nIncorrect!')
+        win.addstr('Incorrect!')
 
     win.addstr(f'\nTime: {total_time:.2f} seconds')
     win.refresh()
