@@ -20,6 +20,7 @@ def build_file_exercise():
         return f.read()
 
 
+# TODO: Wrap in catch-all exception handler
 def main(win):
     while True:
         # exercise_txt = build_numeric_exercise()
@@ -31,7 +32,6 @@ def main(win):
         win.clear()
         win.addstr('Congratulations! Your exercise is done.\nPress any key to restart...')
         win.get_wch()
-
 
 
 signal.signal(signal.SIGINT, lambda signum, frame: exit(0))

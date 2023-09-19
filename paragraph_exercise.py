@@ -3,35 +3,39 @@ import time
 
 
 def _last_position(win):
-    current_position = list(win.getyx())
-    last_position = current_position.copy()
-    last_position[1] -= 1
-    return last_position
-
-
-def _revert_last_char(win, original_char, color_pair):
-    last_position = _last_position(win)
-    win.addstr(*last_position, original_char, color_pair)
-    win.move(*last_position)
+    last_position = list(win.getyx())
+    if last_position[1] == 0:
+        last_position[0] -= 1
+        last_position[1] = win.getmaxyx()[1] - 1
+    else:
+        last_position[1] -= 1
+    return tuple(last_position)
 
 
 def run_paragraph_exercise(win, exercise_txt):
-    exercise_txt_len = len(exercise_txt)
+    CHAR_PENDING = 'p'
+    CHAR_CORRECT = 'c'
+    CHAR_AMENDED = 'a'
+    CHAR_WRONG = 'w'
 
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_RED)
+    curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)
     COLOR_PENDING_TEXT = curses.color_pair(1)
     COLOR_CORRECT_TEXT = curses.color_pair(2)
-    COLOR_WRONG_TEXT = curses.color_pair(3)
+    COLOR_AMENDED_TEXT = curses.color_pair(3)
+    COLOR_WRONG_TEXT = curses.color_pair(4)
 
     win.clear()
     win.addstr(exercise_txt, COLOR_PENDING_TEXT)
     win.move(0,0)
 
-    user_input = ''
-    start_time = None
+    exercise_txt_len = len(exercise_txt)
+    char_state_map = list(CHAR_PENDING * exercise_txt_len)
+    current_char_idx = 0
     error_count = 0
+    start_time = None
 
     while True:
         char = win.get_wch()
@@ -44,29 +48,37 @@ def run_paragraph_exercise(win, exercise_txt):
             start_time = time.time()
 
         if char == '\x7f': # backspace
-            if len(user_input) == 0:
+            if current_char_idx == 0:
                 continue
-            user_input = user_input[:-1]
-            _revert_last_char(win, exercise_txt[len(user_input)], COLOR_PENDING_TEXT)
+            current_char_idx -= 1
+            last_position = _last_position(win)
+            win.addstr(*last_position, exercise_txt[current_char_idx], COLOR_PENDING_TEXT)
+            win.move(*last_position)
         else:
-            if char == exercise_txt[len(user_input)]:
-                win.addstr(char, COLOR_CORRECT_TEXT)
+            if char == exercise_txt[current_char_idx]:
+                if char_state_map[current_char_idx] in (CHAR_PENDING, CHAR_CORRECT):
+                    char_state_map[current_char_idx] = CHAR_CORRECT
+                    win.addstr(char, COLOR_CORRECT_TEXT)
+                else:
+                    char_state_map[current_char_idx] = CHAR_AMENDED
+                    win.addstr(char, COLOR_AMENDED_TEXT)
             else:
-                win.addstr(char, COLOR_WRONG_TEXT)
                 error_count += 1
-            user_input += char
+                char_state_map[current_char_idx] = CHAR_WRONG
+                win.addstr(char, COLOR_WRONG_TEXT)
+            current_char_idx += 1
 
-        if exercise_txt_len == len(user_input):
+        if exercise_txt_len == current_char_idx:
             break
 
     end_time = time.time()
     
+    std_words = exercise_txt_len / 5
+
     total_time_s = end_time - start_time if start_time else 0
     total_time_m = total_time_s / 60
 
-    uncorrected_error_count = sum(1 for a, b in zip(user_input, exercise_txt) if a != b)
-
-    std_words = exercise_txt_len / 5
+    uncorrected_error_count = len([x for x in char_state_map if x == CHAR_WRONG])
 
     gross_wpm = std_words / total_time_m
     net_wpm = gross_wpm - (uncorrected_error_count / total_time_m)
@@ -74,18 +86,13 @@ def run_paragraph_exercise(win, exercise_txt):
     result_accuracy = (exercise_txt_len - uncorrected_error_count) * 100 / exercise_txt_len
     real_accuracy = (exercise_txt_len - error_count) * 100 / exercise_txt_len
 
-    # For debugging
-    # win.addstr('\n')
-    # win.addstr(user_input)
-    # win.addstr(f'\n{len(user_input)}')
-
     current_position = list(win.getyx())
     win.move(current_position[0] + 2, 0)
 
-    if (user_input == exercise_txt):
+    if (uncorrected_error_count == 0):
         win.addstr('All correct!')
     else:
-        win.addstr(f'Some errors have been made.')
+        win.addstr('Errors have been made...')
 
     win.addstr('\n')
     win.addstr(f'\nWPM: {net_wpm:.2f}, {gross_wpm:.2f} gross')
