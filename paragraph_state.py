@@ -69,13 +69,14 @@ class ParagraphState:
         total_time_s = end_time - self.start_time if self.start_time else 0
         total_time_m = total_time_s / 60
         uncorrected_error_count = len([x for x in self.char_state_map if x == self.CHAR_WRONG])
-        gross_wpm = length_std_words / total_time_m
-        net_wpm = gross_wpm - (uncorrected_error_count / total_time_m)
-        result_accuracy = (self.chars_touched - uncorrected_error_count) * 100 / self.chars_touched
-        real_accuracy = (self.chars_touched - self.error_count) * 100 / self.chars_touched
+        gross_wpm = length_std_words / total_time_m if total_time_m > 0 else 0
+        net_wpm = max(0, gross_wpm - (uncorrected_error_count / total_time_m)) if total_time_m > 0 else 0
+        result_accuracy = (self.chars_touched - uncorrected_error_count) * 100 / self.chars_touched if self.chars_touched > 0 else 0
+        real_accuracy = (self.chars_touched - self.error_count) * 100 / self.chars_touched if self.chars_touched > 0 else 0
 
         return {
             'all_correct': uncorrected_error_count == 0,
+            'progress_pct': self.chars_touched * 100 / self.length_txt,
             'length_txt': self.length_txt,
             'length_std_words': length_std_words,
             'total_time_s': total_time_s,

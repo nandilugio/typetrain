@@ -20,26 +20,56 @@ def build_file_exercise():
         return f.read()
 
 
+def update_stats_heading(win, state):
+    curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    HEADER_COLORS = curses.color_pair(1)
+    
+    current_position = list(win.getyx())
+    _, win_width = win.getmaxyx()
+
+    # Labels, values and minimum spacing takes 5+9 + 10+11 + 10+4 = 49 characters
+    spacing_between_fields = (win_width - 49) // 2
+    wpm_val_ljustify_len = 9 + spacing_between_fields
+    accuracy_val_ljustify_len = 11 + spacing_between_fields
+    progress_val_ljustify_len = 4
+
+    win.addstr(0, 0, 'WPM:'.ljust(5 + wpm_val_ljustify_len) + \
+        'Accuracy:'.ljust(10 + accuracy_val_ljustify_len) + \
+        'Progress:', HEADER_COLORS)
+
+    stats = state.get_stats()
+
+    wpm_start_x = 5
+    accuracy_starts_x = wpm_start_x + wpm_val_ljustify_len + 10
+    progress_starts_x = accuracy_starts_x + accuracy_val_ljustify_len + 10
+
+    win.move(0, 0)
+    win.addstr(0, wpm_start_x, f'{stats["net_wpm"]:.0f} ({stats["gross_wpm"]:.0f})'.ljust(wpm_val_ljustify_len))
+    win.addstr(0, accuracy_starts_x, f'{stats["result_accuracy"]:.0f}% ({stats["real_accuracy"]:.0f}%)'.ljust(accuracy_val_ljustify_len))
+    win.addstr(0, progress_starts_x, f'{stats["progress_pct"]:.0f}%'.ljust(progress_val_ljustify_len))
+    win.move(*current_position)
+
+
 def run_paragraph_exercise(win, exercise_txt):
-    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-    curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)
+    curses.init_pair(10, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(11, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(12, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(13, curses.COLOR_WHITE, curses.COLOR_RED)
 
     COLORS_BY_STATE = {
-        ParagraphState.CHAR_PENDING: curses.color_pair(1),
-        ParagraphState.CHAR_CORRECT: curses.color_pair(2),
-        ParagraphState.CHAR_AMENDED: curses.color_pair(3),
-        ParagraphState.CHAR_WRONG: curses.color_pair(4),
+        ParagraphState.CHAR_PENDING: curses.color_pair(10),
+        ParagraphState.CHAR_CORRECT: curses.color_pair(11),
+        ParagraphState.CHAR_AMENDED: curses.color_pair(12),
+        ParagraphState.CHAR_WRONG: curses.color_pair(13),
     }
 
     # Draw the initial state of the screen
     # TODO: Wrap text by words (not by characters)
     win.clear()
-    win.addstr(exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
-    win.move(0,0)
-
     state = ParagraphState(exercise_txt)
+    update_stats_heading(win, state)
+    win.addstr(2,0, exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
+    win.move(2,0)
 
     # Loop to handle keypresses
     while True:
@@ -74,6 +104,8 @@ def run_paragraph_exercise(win, exercise_txt):
             win.addstr(char, COLORS_BY_STATE[char_state]) 
 
         # TODO: Handle arrow keys or other special keys
+
+        update_stats_heading(win, state)
 
         if state.is_exercise_done():
             break
