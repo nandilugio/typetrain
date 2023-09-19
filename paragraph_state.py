@@ -17,6 +17,7 @@ class ParagraphState:
         self.length_txt = len(self.exercise_txt)
         self.char_state_map = list(self.CHAR_PENDING * self.length_txt)
         self.current_char_idx = 0
+        self.chars_touched = 0
         self.error_count = 0
         self.start_time = None
         self.end_time = None
@@ -39,6 +40,7 @@ class ParagraphState:
         # Update the state of the character
         self.char_state_map[self.current_char_idx] = resulting_char_state
         self.current_char_idx += 1
+        self.chars_touched = max(self.chars_touched, self.current_char_idx)
 
         # Stop the timer if it's the last character
         if self.current_char_idx == self.length_txt:
@@ -62,14 +64,15 @@ class ParagraphState:
     
 
     def get_stats(self):
-        length_std_words = self.length_txt / 5
-        total_time_s = self.end_time - self.start_time if self.start_time else 0
+        end_time = self.end_time or time.time()
+        length_std_words = self.chars_touched / 5
+        total_time_s = end_time - self.start_time if self.start_time else 0
         total_time_m = total_time_s / 60
         uncorrected_error_count = len([x for x in self.char_state_map if x == self.CHAR_WRONG])
         gross_wpm = length_std_words / total_time_m
         net_wpm = gross_wpm - (uncorrected_error_count / total_time_m)
-        result_accuracy = (self.length_txt - uncorrected_error_count) * 100 / self.length_txt
-        real_accuracy = (self.length_txt - self.error_count) * 100 / self.length_txt
+        result_accuracy = (self.chars_touched - uncorrected_error_count) * 100 / self.chars_touched
+        real_accuracy = (self.chars_touched - self.error_count) * 100 / self.chars_touched
 
         return {
             'all_correct': uncorrected_error_count == 0,
