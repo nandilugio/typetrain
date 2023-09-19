@@ -20,7 +20,7 @@ def run_paragraph_exercise(win, exercise_txt):
 
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_RED)
     COLOR_PENDING_TEXT = curses.color_pair(1)
     COLOR_CORRECT_TEXT = curses.color_pair(2)
     COLOR_WRONG_TEXT = curses.color_pair(3)
@@ -37,7 +37,7 @@ def run_paragraph_exercise(win, exercise_txt):
         if type(char) == int: # keypress not mapped to a character
             continue
         if char == '\n':
-            break
+            continue
 
         if start_time is None:
             start_time = time.time()
@@ -65,7 +65,8 @@ def run_paragraph_exercise(win, exercise_txt):
     # win.addstr(user_input)
     # win.addstr(f'\n{len(user_input)}')
 
-    win.move(1,0)
+    current_position = list(win.getyx())
+    win.move(current_position[0] + 1, 0)
     if (user_input == exercise_txt):
         win.addstr('Correct!')
     else:

@@ -15,9 +15,15 @@ def build_numeric_exercise(num_lines=3, num_words_per_line=4, num_digits=4):
     return exercise_txt
 
 
+def build_file_exercise():
+    with open('exercise.txt', 'r') as f:
+        return f.read()
+
+
 def main(win):
     while True:
-        exercise_txt = build_numeric_exercise()
+        # exercise_txt = build_numeric_exercise()
+        exercise_txt = build_file_exercise()
         for paragraph in exercise_txt.split('\n'):
             if len(paragraph) == 0:
                 continue
