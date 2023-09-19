@@ -31,6 +31,7 @@ def run_paragraph_exercise(win, exercise_txt):
 
     user_input = ''
     start_time = None
+    error_count = 0
 
     while True:
         char = win.get_wch()
@@ -52,13 +53,26 @@ def run_paragraph_exercise(win, exercise_txt):
                 win.addstr(char, COLOR_CORRECT_TEXT)
             else:
                 win.addstr(char, COLOR_WRONG_TEXT)
+                error_count += 1
             user_input += char
 
         if exercise_txt_len == len(user_input):
             break
 
     end_time = time.time()
-    total_time = end_time - start_time if start_time else 0
+    
+    total_time_s = end_time - start_time if start_time else 0
+    total_time_m = total_time_s / 60
+
+    uncorrected_error_count = sum(1 for a, b in zip(user_input, exercise_txt) if a != b)
+
+    std_words = exercise_txt_len / 5
+
+    gross_wpm = std_words / total_time_m
+    net_wpm = gross_wpm - (uncorrected_error_count / total_time_m)
+
+    result_accuracy = (exercise_txt_len - uncorrected_error_count) * 100 / exercise_txt_len
+    real_accuracy = (exercise_txt_len - error_count) * 100 / exercise_txt_len
 
     # For debugging
     # win.addstr('\n')
@@ -66,13 +80,25 @@ def run_paragraph_exercise(win, exercise_txt):
     # win.addstr(f'\n{len(user_input)}')
 
     current_position = list(win.getyx())
-    win.move(current_position[0] + 1, 0)
-    if (user_input == exercise_txt):
-        win.addstr('Correct!')
-    else:
-        win.addstr('Incorrect!')
+    win.move(current_position[0] + 2, 0)
 
-    win.addstr(f'\nTime: {total_time:.2f} seconds')
+    if (user_input == exercise_txt):
+        win.addstr('All correct!')
+    else:
+        win.addstr(f'Some errors have been made.')
+
+    win.addstr('\n')
+    win.addstr(f'\nTime: {total_time_s:.2f} seconds')
+    win.addstr(f'\nGross WPM: {gross_wpm:.2f}')
+    win.addstr(f'\nNet WPM: {net_wpm:.2f}')
+    win.addstr('\n')
+    win.addstr(f'\nExcercise Length: {exercise_txt_len} chars, or {std_words:.2f} "standard" words.')
+    win.addstr(f'\nErrors: {error_count}, {uncorrected_error_count} not corrected.')
+    win.addstr(f'\nResult Accuracy: {result_accuracy:.2f}%')
+    win.addstr(f'\nReal Accuracy: {real_accuracy:.2f}%')
+    win.addstr('\n')
+    
+    win.addstr(f'\nTime: {total_time_s:.2f} seconds')
     win.refresh()
     win.addstr('\nPress <ENTER> to continue...')
     win.refresh()
