@@ -15,6 +15,7 @@ class ParagraphState:
         self.exercise_txt = exercise_txt
         
         self.length_txt = len(self.exercise_txt)
+        
         self.char_state_map = list(self.CHAR_PENDING * self.length_txt)
         self.current_char_idx = 0
         self.chars_touched = 0
@@ -64,15 +65,18 @@ class ParagraphState:
     
 
     def get_stats(self):
+        # Formulas from https://www.speedtypingonline.com/typing-equations
         end_time = self.end_time or time.time()
         length_std_words = self.chars_touched / 5
         total_time_s = end_time - self.start_time if self.start_time else 0
         total_time_m = total_time_s / 60
         uncorrected_error_count = len([x for x in self.char_state_map if x == self.CHAR_WRONG])
         gross_wpm = length_std_words / total_time_m if total_time_m > 0 else 0
+        # Net WPM could be negative since an error is penalized as one whole wrong word. Constrained since it wouldn't make much sense
         net_wpm = max(0, gross_wpm - (uncorrected_error_count / total_time_m)) if total_time_m > 0 else 0
         result_accuracy = (self.chars_touched - uncorrected_error_count) * 100 / self.chars_touched if self.chars_touched > 0 else 0
-        real_accuracy = (self.chars_touched - self.error_count) * 100 / self.chars_touched if self.chars_touched > 0 else 0
+        # Real accuracy could be negative if there are many errors on the same characters. Constrained since it wouldn't make much sense
+        real_accuracy = max(0, (self.chars_touched - self.error_count) * 100 / self.chars_touched) if self.chars_touched > 0 else 0
 
         return {
             'all_correct': uncorrected_error_count == 0,

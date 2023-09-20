@@ -67,7 +67,7 @@ def run_paragraph_exercise(win, exercise_txt):
             continue
 
         # Handle keypress
-        if char == '\x7f': # Backspace
+        if char in ('\x7f', '\b', 'KEY_BACKSPACE'): # Backspace TODO: are the last two needed? maybe for other OSes?
             try:
                 deleted_char = state.backspace_pressed()
             except ParagraphState.CannotGoBack:
@@ -83,6 +83,8 @@ def run_paragraph_exercise(win, exercise_txt):
 
             win.addstr(*last_position, deleted_char, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
             win.move(*last_position)
+
+        # TODO: How do we make inverted question/exclamation marks, euro signs and other chars work? is it my keyboard layout?
 
         else: # Characters
             char_state = state.char_typed(char)
