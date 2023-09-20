@@ -5,7 +5,7 @@ from exercise_builders import *
 from paragraph_state import ParagraphState
 
 
-def update_stats_heading(win, state):
+def update_stats_heading(win, stats):
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
     HEADER_COLORS = curses.color_pair(1)
     
@@ -22,8 +22,6 @@ def update_stats_heading(win, state):
         'Accuracy:'.ljust(10 + accuracy_val_ljustify_len) + \
         'Progress:', HEADER_COLORS)
 
-    stats = state.get_stats()
-
     wpm_start_x = 5
     accuracy_starts_x = wpm_start_x + wpm_val_ljustify_len + 10
     progress_starts_x = accuracy_starts_x + accuracy_val_ljustify_len + 10
@@ -33,6 +31,14 @@ def update_stats_heading(win, state):
     win.addstr(0, accuracy_starts_x, f'{stats["result_accuracy"]:.0f}% ({stats["real_accuracy"]:.0f}%)'.ljust(accuracy_val_ljustify_len))
     win.addstr(0, progress_starts_x, f'{stats["progress_pct"]:.0f}%'.ljust(progress_val_ljustify_len))
     win.move(*current_position)
+
+
+def render_stats_as_list(stats):
+    return f'WPM: {stats["net_wpm"]:.2f}, {stats["gross_wpm"]:.2f} gross\n' + \
+        f'Accuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real\n' + \
+        f'Errors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected\n' + \
+        f'Excercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words\n' + \
+        f'Time: {stats["total_time_s"]:.2f} s\n'
 
 
 def run_paragraph_exercise(win, exercise_txt):
@@ -52,7 +58,7 @@ def run_paragraph_exercise(win, exercise_txt):
     # TODO: Wrap text by words (not by characters)
     win.clear()
     state = ParagraphState(exercise_txt)
-    update_stats_heading(win, state)
+    update_stats_heading(win, state.stats())  # Will be all zeroes
     win.addstr(2,0, exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
     win.move(2,0)
 
@@ -69,7 +75,7 @@ def run_paragraph_exercise(win, exercise_txt):
         # Handle keypress
         if char in ('\x7f', '\b', 'KEY_BACKSPACE'): # Backspace TODO: are the last two needed? maybe for other OSes?
             try:
-                deleted_char = state.backspace_pressed()
+                deleted_char = state.register_backspace()
             except ParagraphState.CannotGoBack:
                 continue
 
@@ -87,12 +93,12 @@ def run_paragraph_exercise(win, exercise_txt):
         # TODO: How do we make inverted question/exclamation marks, euro signs and other chars work? is it my keyboard layout?
 
         else: # Characters
-            char_state = state.char_typed(char)
+            char_state = state.register_char(char)
             win.addstr(char, COLORS_BY_STATE[char_state]) 
 
         # TODO: Handle arrow keys or other special keys
 
-        update_stats_heading(win, state)
+        update_stats_heading(win, state.stats())
 
         if state.is_exercise_done():
             break
@@ -101,22 +107,12 @@ def run_paragraph_exercise(win, exercise_txt):
     current_position = list(win.getyx())
     win.move(current_position[0] + 2, 0)
 
-    stats = state.get_stats()
-
+    stats = state.stats()
     if (stats['all_correct'] ):
         win.addstr('All correct!')
     else:
         win.addstr('Errors have been made...')
-
-    win.addstr('\n')
-    win.addstr(f'\nWPM: {stats["net_wpm"]:.2f}, {stats["gross_wpm"]:.2f} gross')
-    win.addstr(f'\nAccuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real')
-    win.addstr(f'\nErrors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected')
-    win.addstr(f'\nExcercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words')
-    win.addstr(f'\nTime: {stats["total_time_s"]:.2f} s')
-    win.addstr('\n')
-    
-    win.refresh()
+    win.addstr(f'\n{render_stats_as_list(stats)}\n')
     win.addstr('\nPress <ENTER> to continue...')
     win.refresh()
     win.getstr()

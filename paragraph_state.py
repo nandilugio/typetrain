@@ -24,7 +24,7 @@ class ParagraphState:
         self.end_time = None
 
 
-    def char_typed(self, char):
+    def register_char(self, char):
         # Start the timer if it's the first character
         if self.start_time is None:
             self.start_time = time.time()
@@ -50,7 +50,7 @@ class ParagraphState:
         return resulting_char_state
 
 
-    def backspace_pressed(self):
+    def register_backspace(self):
         if self.current_char_idx == 0:
             raise self.CannotGoBack()
 
@@ -64,7 +64,7 @@ class ParagraphState:
         return self.end_time is not None
     
 
-    def get_stats(self):
+    def stats(self):
         # Formulas from https://www.speedtypingonline.com/typing-equations
         end_time = self.end_time or time.time()
         length_std_words = self.chars_touched / 5
