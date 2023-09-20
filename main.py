@@ -1,8 +1,9 @@
+import argparse
 import curses
 import signal
 
-from exercise_builders import *
 from paragraph_state import ParagraphState
+from plugins import get_plugins
 
 
 def update_stats_heading(win, stats):
@@ -112,25 +113,44 @@ def run_paragraph_exercise(win, exercise_txt):
         win.addstr('All correct!')
     else:
         win.addstr('Errors have been made...')
-    win.addstr(f'\n{render_stats_as_list(stats)}\n')
-    win.addstr('\nPress <ENTER> to continue...')
+    win.addstr(f'\n\n{render_stats_as_list(stats)}\n')
+    win.addstr('Press <ENTER> to continue...')
     win.refresh()
     win.getstr()
 
+    return stats
+
+
+def curses_app(win, selected_plugin):
+    stats_per_paragraph = []
+    for paragraph in selected_plugin.paragraph_generator():
+        if len(paragraph) == 0:
+            continue
+        stats = run_paragraph_exercise(win, paragraph)
+        stats_per_paragraph.append(stats)
+
+    # TODO aggregate and show overall stats
+
+    win.clear()
+    win.addstr('Congratulations! Your exercise is done.\n')
+    win.get_wch()
+    
+
+def main():
+    parser = argparse.ArgumentParser(prog='typetrain', description='Practice some typing with the TypeTrain!')
+    subparsers = parser.add_subparsers(required=True, title='exercise types', dest='exercise_type') # TODO restrict, using `choices`?
+    for plugin in get_plugins():
+        plugin_parser = subparsers.add_parser(plugin.one_word_name, help=plugin.description)
+        plugin.configure_argparse_subparser(plugin_parser)
+        plugin_parser.set_defaults(plugin=plugin)
+    args = parser.parse_args()
+
+    selected_plugin = args.plugin(args)
+
+    curses.wrapper(curses_app, selected_plugin)
+
 
 # TODO: Wrap in catch-all exception handler
-def main(win):
-    while True:
-        # exercise_txt = build_numeric_exercise()
-        exercise_txt = build_file_exercise()
-        for paragraph in exercise_txt.split('\n'):
-            if len(paragraph) == 0:
-                continue
-            run_paragraph_exercise(win, paragraph)
-        win.clear()
-        win.addstr('Congratulations! Your exercise is done.\nPress any key to restart...')
-        win.get_wch()
-
-
 signal.signal(signal.SIGINT, lambda signum, frame: exit(0))
-curses.wrapper(main)
+if __name__ == '__main__':
+    main()
