@@ -39,7 +39,7 @@ def render_stats_as_list(stats):
         f'Accuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real\n' + \
         f'Errors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected\n' + \
         f'Excercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words\n' + \
-        f'Time: {stats["total_time_s"]:.2f} s\n'
+        f'Time: {stats["time_s"]:.2f} s\n'
 
 
 def run_paragraph_exercise(win, exercise_txt):

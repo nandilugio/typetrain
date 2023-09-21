@@ -21,4 +21,3 @@ class RandomFile:
             random.shuffle(paragraphs)
             for paragraph in paragraphs:
                 yield paragraph.strip()
-            
