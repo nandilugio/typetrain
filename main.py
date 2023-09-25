@@ -34,11 +34,13 @@ def update_stats_heading(win, stats):
 
 
 def render_stats_as_list(stats):
-    return f'WPM: {stats["net_wpm"]:.2f}, {stats["gross_wpm"]:.2f} gross\n' + \
-        f'Accuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real\n' + \
-        f'Errors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected\n' + \
-        f'Excercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words\n' + \
+    return (
+        f'WPM: {stats["net_wpm"]:.2f}, {stats["gross_wpm"]:.2f} gross\n'
+        f'Accuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real\n'
+        f'Errors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected\n'
+        f'Excercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words\n'
         f'Time: {stats["time_s"]:.2f} s\n'
+    )
 
 
 def render_aggregate_stats_as_list(agg_stats):
