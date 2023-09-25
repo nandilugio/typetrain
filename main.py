@@ -1,6 +1,5 @@
 import argparse
 import curses
-import signal
 
 from paragraph_state import ParagraphState
 from plugins import get_plugins
@@ -39,7 +38,19 @@ def render_stats_as_list(stats):
         f'Accuracy: {stats["result_accuracy"]:.2f}%, {stats["real_accuracy"]:.2f}% real\n' + \
         f'Errors: {stats["error_count"]}, {stats["uncorrected_error_count"]} not corrected\n' + \
         f'Excercise Length: {stats["length_txt"]} chars, {stats["length_std_words"]:.2f} "standard" words\n' + \
-        f'Time: {stats["total_time_s"]:.2f} s\n'
+        f'Time: {stats["time_s"]:.2f} s\n'
+
+
+def render_aggregate_stats_as_list(agg_stats):
+    return (
+        f'Average WPM: {agg_stats["net_wpm"]:.2f} ({agg_stats["gross_wpm"]:.2f} gross)\n'
+        f'Average accuracy: {agg_stats["result_accuracy"]:.2f}% ({agg_stats["real_accuracy"]:.2f}% real)\n'
+        f'Errors: {agg_stats["error_count"]} ({agg_stats["uncorrected_error_count"]} not corrected)\n'
+        f'Total exercises length: {agg_stats["total_length_txt"]} chars, {agg_stats["total_length_std_words"]:.2f} "standard" words\n'
+        f'Total paragraphs: {agg_stats["total_paragraphs"]}\n'
+        f'Correct paragraphs: {agg_stats["correct_paragraphs"]} ({agg_stats["correct_paragraphs_pct"]:.2f}%)\n'
+        f'Total typing time: {agg_stats["time_m"]:.2f} minutes\n'
+    )
 
 
 def run_paragraph_exercise(win, exercise_txt):
@@ -123,19 +134,26 @@ def run_paragraph_exercise(win, exercise_txt):
 
 def curses_app(win, selected_plugin):
     stats_per_paragraph = []
-    for paragraph in selected_plugin.paragraph_generator():
-        if len(paragraph) == 0:
-            continue
-        stats = run_paragraph_exercise(win, paragraph)
-        stats_per_paragraph.append(stats)
-
-    # TODO aggregate and show overall stats
+    try:
+        for paragraph in selected_plugin.paragraph_generator():
+            if len(paragraph) == 0:
+                continue
+            stats = run_paragraph_exercise(win, paragraph)
+            stats_per_paragraph.append(stats)
+    except KeyboardInterrupt:
+        curses.flushinp()
 
     win.clear()
-    win.addstr('Congratulations! Your exercise is done.\n')
-    win.get_wch()
-    
+    win.addstr('Congratulations! Your exercise is done.\n\n')
 
+    aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
+    win.addstr(render_aggregate_stats_as_list(aggregate_stats))
+
+    win.addstr('\nPress <ENTER> to continue...')
+    win.refresh()
+    win.getstr()
+
+    
 def main():
     parser = argparse.ArgumentParser(prog='typetrain', description='Practice some typing with the TypeTrain!')
     subparsers = parser.add_subparsers(required=True, title='exercise types', dest='exercise_type') # TODO restrict, using `choices`?
@@ -150,7 +168,5 @@ def main():
     curses.wrapper(curses_app, selected_plugin)
 
 
-# TODO: Wrap in catch-all exception handler
-signal.signal(signal.SIGINT, lambda signum, frame: exit(0))
 if __name__ == '__main__':
     main()
