@@ -10,8 +10,8 @@ class Numbers:
 
     @staticmethod
     def configure_argparse_subparser(parser):
-        parser.add_argument('--words', type=int, default=4, help='number of words per paragraph')
-        parser.add_argument('--digits', type=int, default=4, help='number of digits per word')
+        parser.add_argument('--words', type=int, default=6, help='number of words per paragraph')
+        parser.add_argument('--digits', type=int, default=6, help='number of digits per word')
 
     def paragraph_generator(self):
         while True:

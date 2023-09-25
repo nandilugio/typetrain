@@ -1,3 +1,4 @@
+from functools import reduce
 import time
 
 
@@ -113,7 +114,7 @@ class ParagraphState:
             
             return acc
         
-        return map(aggregate, stats_list, {
+        return reduce(aggregate, stats_list, {
             'total_paragraphs': 0,
             'correct_paragraphs': 0,
             'correct_paragraphs_pct': 0,
