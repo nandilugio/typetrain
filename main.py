@@ -127,9 +127,6 @@ def run_paragraph_exercise(win, exercise_txt):
     else:
         win.addstr('Errors have been made...')
     win.addstr(f'\n\n{render_stats_as_list(stats)}\n')
-    win.addstr('Press <ENTER> to continue...')
-    win.refresh()
-    win.getstr()
 
     return stats
 
@@ -142,6 +139,9 @@ def curses_app(win, selected_plugin):
                 continue
             stats = run_paragraph_exercise(win, paragraph)
             stats_per_paragraph.append(stats)
+            win.addstr('Press <ENTER> to continue...')
+            win.refresh()
+            win.getstr()
     except KeyboardInterrupt:
         curses.flushinp()
 
