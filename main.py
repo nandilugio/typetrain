@@ -1,5 +1,6 @@
 import argparse
 import curses
+import time
 
 from paragraph_state import ParagraphState
 from plugins import get_plugins
@@ -150,9 +151,11 @@ def curses_app(win, selected_plugin):
 
     aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
     win.addstr(render_aggregate_stats_as_list(aggregate_stats))
-
-    win.addstr('\nPress <ENTER> to continue...')
     win.refresh()
+
+    time.sleep(1)
+    curses.flushinp()
+    win.addstr('\nPress <ENTER> to continue...')
     win.getstr()
 
     
