@@ -1,5 +1,6 @@
 import argparse
 import curses
+import time
 
 from paragraph_state import ParagraphState
 from plugins import get_plugins
@@ -127,9 +128,6 @@ def run_paragraph_exercise(win, exercise_txt):
     else:
         win.addstr('Errors have been made...')
     win.addstr(f'\n\n{render_stats_as_list(stats)}\n')
-    win.addstr('Press <ENTER> to continue...')
-    win.refresh()
-    win.getstr()
 
     return stats
 
@@ -142,6 +140,9 @@ def curses_app(win, selected_plugin):
                 continue
             stats = run_paragraph_exercise(win, paragraph)
             stats_per_paragraph.append(stats)
+            win.addstr('Press <ENTER> to continue...')
+            win.refresh()
+            win.getstr()
     except KeyboardInterrupt:
         curses.flushinp()
 
@@ -150,9 +151,11 @@ def curses_app(win, selected_plugin):
 
     aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
     win.addstr(render_aggregate_stats_as_list(aggregate_stats))
-
-    win.addstr('\nPress <ENTER> to continue...')
     win.refresh()
+
+    time.sleep(1)
+    curses.flushinp()
+    win.addstr('\nPress <ENTER> to continue...')
     win.getstr()
 
     
