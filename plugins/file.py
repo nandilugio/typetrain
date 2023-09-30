@@ -1,5 +1,6 @@
 import os
 
+
 class File:
     one_word_name = 'file'
     description = 'practice typing the contents of a file'
@@ -16,5 +17,5 @@ class File:
             exit(f'File {self.path} does not exist')
 
         with open(self.path, 'r') as f:
-            while line := f.readline():
-                yield line.strip()
+            while paragraph := f.readline():
+                yield paragraph

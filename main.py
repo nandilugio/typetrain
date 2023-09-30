@@ -1,6 +1,7 @@
 import argparse
 import curses
 import time
+import unicodedata
 
 from paragraph_state import ParagraphState
 from plugins import get_plugins
@@ -69,6 +70,17 @@ def run_paragraph_exercise(win, exercise_txt):
         ParagraphState.CHAR_WRONG: curses.color_pair(13),
     }
 
+    # Unicode combining characters take space on the string, but
+    # not on the screen, messing up UI calculations. The line is
+    # then normalized to NFKC. This way we have no combining
+    # characters, and have the resutling combined characters be
+    # the canonical equivalent form, most probably the one the
+    # keyboard/terminal/OS will deliver (untested assumption but
+    # makes sense :p).
+    #
+    # Note we also strip the string from surrounding whitespace.
+    exercise_txt = unicodedata.normalize('NFKC', exercise_txt.strip())
+
     # Draw the initial state of the screen
     # TODO: Wrap text by words (not by characters)
     win.clear()
@@ -78,17 +90,11 @@ def run_paragraph_exercise(win, exercise_txt):
     win.move(2,0)
 
     # Loop to handle keypresses
-    while True:
-        char = win.get_wch()
+    while not state.is_exercise_done():
+        key = win.get_wch()
 
-        # Bail out if needed
-        if type(char) == int: # Keypress not mapped to a character
-            continue
-        if char == '\n':
-            continue
-
-        # Handle keypress
-        if char in ('\x7f', '\b', 'KEY_BACKSPACE'): # Backspace TODO: are the last two needed? maybe for other OSes?
+        # Handle backspace (POSIX, Windows)
+        if key in ('\x7f', '\x08'):
             try:
                 deleted_char = state.register_backspace()
             except ParagraphState.CannotGoBack:
@@ -105,18 +111,16 @@ def run_paragraph_exercise(win, exercise_txt):
             win.addstr(*last_position, deleted_char, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
             win.move(*last_position)
 
-        # TODO: How do we make inverted question/exclamation marks, euro signs and other chars work? is it my keyboard layout?
+        # Handle regular printable character
+        elif type(key) == str and key.isprintable():
+            char_state = state.register_char(key)
+            win.addstr(key, COLORS_BY_STATE[char_state]) 
 
-        else: # Characters
-            char_state = state.register_char(char)
-            win.addstr(char, COLORS_BY_STATE[char_state]) 
-
-        # TODO: Handle arrow keys or other special keys
+        # Other keypresses produce ints or non-printable strings
+        else:
+            continue
 
         update_stats_heading(win, state.stats())
-
-        if state.is_exercise_done():
-            break
 
     # Exercise done. Move below text to display stats
     current_position = list(win.getyx())
