@@ -146,14 +146,13 @@ def run_paragraph_exercise(win, exercise_txt):
 def curses_app(win, selected_plugin, skip):
     stats_per_paragraph = []
     try:
-        for i, paragraph in enumerate(selected_plugin.paragraph_generator()):
-            if i < skip:
-                continue
-
+        for paragraph in selected_plugin.paragraph_generator():
             paragraph = paragraph.strip()
             if len(paragraph) == 0:
                 continue
-
+            if skip > 0:
+                skip -= 1
+                continue
             stats = run_paragraph_exercise(win, paragraph)
             stats_per_paragraph.append(stats)
             win.addstr('Press <ENTER> to continue...')
