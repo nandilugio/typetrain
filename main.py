@@ -191,8 +191,9 @@ def main():
     selected_plugin = args.plugin(args)
 
     aggregate_stats = curses.wrapper(curses_app, selected_plugin, skip=args.skip)
-    last_written_paragraph_index = aggregate_stats["total_paragraphs"] + args.skip
-    if last_written_paragraph_index > 0:
+
+    if aggregate_stats["total_paragraphs"] > 0:
+        last_written_paragraph_index = aggregate_stats["total_paragraphs"] + args.skip
         print(f'Last paragraph written was the {ordinal(last_written_paragraph_index)}\n')
 
 
