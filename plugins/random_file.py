@@ -20,4 +20,4 @@ class RandomFile:
             paragraphs = f.read().split('\n')
             random.shuffle(paragraphs)
             for paragraph in paragraphs:
-                yield paragraph.strip()
+                yield paragraph
