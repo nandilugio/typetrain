@@ -86,9 +86,7 @@ def run_paragraph_exercise(win, exercise_txt):
     # the canonical equivalent form, most probably the one the
     # keyboard/terminal/OS will deliver (untested assumption but
     # makes sense :p).
-    #
-    # Note we also strip the string from surrounding whitespace.
-    exercise_txt = unicodedata.normalize('NFKC', exercise_txt.strip())
+    exercise_txt = unicodedata.normalize('NFKC', exercise_txt)
 
     # Draw the initial state of the screen
     # TODO: Wrap text by words (not by characters)
@@ -152,6 +150,7 @@ def curses_app(win, selected_plugin, skip):
             if i < skip:
                 continue
 
+            paragraph = paragraph.strip()
             if len(paragraph) == 0:
                 continue
 
