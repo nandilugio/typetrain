@@ -7,6 +7,15 @@ from paragraph_state import ParagraphState
 from plugins import get_plugins
 
 
+# From https://stackoverflow.com/questions/9647202/ordinal-numbers-replacement
+def ordinal(n):
+    if 11 <= (n % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+    return str(n) + suffix
+
+
 def update_stats_heading(win, stats):
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
     HEADER_COLORS = curses.color_pair(1)
@@ -136,17 +145,22 @@ def run_paragraph_exercise(win, exercise_txt):
     return stats
 
 
-def curses_app(win, selected_plugin):
+def curses_app(win, selected_plugin, skip):
     stats_per_paragraph = []
     try:
-        for paragraph in selected_plugin.paragraph_generator():
+        for i, paragraph in enumerate(selected_plugin.paragraph_generator()):
+            if i < skip:
+                continue
+
             if len(paragraph) == 0:
                 continue
+
             stats = run_paragraph_exercise(win, paragraph)
             stats_per_paragraph.append(stats)
             win.addstr('Press <ENTER> to continue...')
             win.refresh()
             win.getstr()
+
     except KeyboardInterrupt:
         curses.flushinp()
 
@@ -162,9 +176,12 @@ def curses_app(win, selected_plugin):
     win.addstr('\nPress <ENTER> to continue...')
     win.getstr()
 
+    return aggregate_stats
+
     
 def main():
     parser = argparse.ArgumentParser(prog='typetrain', description='Practice some typing with the TypeTrain!')
+    parser.add_argument('--skip', type=int, default=0, help='skip the first N paragraphs')
     subparsers = parser.add_subparsers(required=True, title='exercise types', dest='exercise_type') # TODO restrict, using `choices`?
     for plugin in get_plugins():
         plugin_parser = subparsers.add_parser(plugin.one_word_name, help=plugin.description)
@@ -174,7 +191,10 @@ def main():
 
     selected_plugin = args.plugin(args)
 
-    curses.wrapper(curses_app, selected_plugin)
+    aggregate_stats = curses.wrapper(curses_app, selected_plugin, skip=args.skip)
+    last_written_paragraph_index = aggregate_stats["total_paragraphs"] + args.skip
+    if last_written_paragraph_index > 0:
+        print(f'Last paragraph written was the {ordinal(last_written_paragraph_index)}\n')
 
 
 if __name__ == '__main__':
