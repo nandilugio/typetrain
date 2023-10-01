@@ -65,14 +65,16 @@ class ParagraphState:
         return self.end_time is not None
     
 
+    # Formulas from https://www.speedtypingonline.com/typing-equations
     def stats(self):
-        # Formulas from https://www.speedtypingonline.com/typing-equations
         end_time = self.end_time or time.time()
         length_std_words = self.chars_touched / 5
         time_s = end_time - self.start_time if self.start_time else 0
         total_time_m = time_s / 60
         uncorrected_error_count = len([x for x in self.char_state_map if x == self.CHAR_WRONG])
-        gross_wpm = length_std_words / total_time_m if total_time_m > 0 else 0
+
+        # HACK: 0.2 is the word-length of a character. This fixes the issue of a single character being counted as infinite WPM
+        gross_wpm = (length_std_words - 0.2) / total_time_m if total_time_m > 0 else 0
         # Net WPM could be negative since an error is penalized as one whole wrong word. Constrained since it wouldn't make much sense
         net_wpm = max(0, gross_wpm - (uncorrected_error_count / total_time_m)) if total_time_m > 0 else 0
         result_accuracy = (self.chars_touched - uncorrected_error_count) * 100 / self.chars_touched if self.chars_touched > 0 else 0
@@ -93,6 +95,7 @@ class ParagraphState:
             'real_accuracy': real_accuracy,
         }
     
+    # Formulas from https://www.speedtypingonline.com/typing-equations
     @staticmethod
     def aggregate_multiple_stats(stats_list):
         def aggregate(acc, stats):
@@ -102,15 +105,19 @@ class ParagraphState:
             acc['correct_paragraphs_pct'] = acc['correct_paragraphs'] * 100 / acc['total_paragraphs']
             
             acc['total_length_txt'] += stats['length_txt']
-            acc['total_length_std_words'] += stats['length_std_words']
-            acc['time_m'] += stats['time_s'] / 60
+            acc['total_length_std_words'] = acc['total_length_txt'] / 5
+            acc['time_s'] += stats['time_s']
+            acc['time_m'] = acc['time_s'] / 60
             acc['error_count'] += stats['error_count']
             acc['uncorrected_error_count'] += stats['uncorrected_error_count']
             
-            acc['gross_wpm'] = ((acc['gross_wpm'] * (acc['total_paragraphs'] - 1)) + stats['gross_wpm']) / acc['total_paragraphs']
-            acc['net_wpm'] = ((acc['net_wpm'] * (acc['total_paragraphs'] - 1)) + stats['net_wpm']) / acc['total_paragraphs'] 
-            acc['result_accuracy'] = ((acc['result_accuracy'] * (acc['total_paragraphs'] - 1)) + stats['result_accuracy']) / acc['total_paragraphs']
-            acc['real_accuracy'] = ((acc['real_accuracy'] * (acc['total_paragraphs'] - 1)) + stats['real_accuracy']) / acc['total_paragraphs']
+            # HACK: 0.2 is the word-length of a character. This fixes the issue of a single character being counted as infinite WPM
+            acc['gross_wpm'] = (acc['total_length_std_words'] - 0.2) / acc['time_m'] if acc['time_m'] > 0 else 0
+            # Net WPM could be negative since an error is penalized as one whole wrong word. Constrained since it wouldn't make much sense
+            acc['net_wpm'] = max(0, acc['gross_wpm'] - (acc['uncorrected_error_count'] / acc['time_m'])) if acc['time_m'] > 0 else 0
+            acc['result_accuracy'] = (acc['total_length_txt'] - acc['uncorrected_error_count']) * 100 / acc['total_length_txt'] if acc['total_length_txt'] > 0 else 0
+            # Real accuracy could be negative if there are many errors on the same characters. Constrained since it wouldn't make much sense
+            acc['real_accuracy'] = max(0, (acc['total_length_txt'] - acc['error_count']) * 100 / acc['total_length_txt']) if acc['total_length_txt'] > 0 else 0
             
             return acc
         
@@ -120,6 +127,7 @@ class ParagraphState:
             'correct_paragraphs_pct': 0,
             'total_length_txt': 0,
             'total_length_std_words': 0,
+            'time_s': 0,
             'time_m': 0,
             'error_count': 0,
             'uncorrected_error_count': 0,

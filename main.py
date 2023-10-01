@@ -146,35 +146,38 @@ def run_paragraph_exercise(win, exercise_txt):
 def curses_app(win, selected_plugin, skip):
     stats_per_paragraph = []
     try:
-        for paragraph in selected_plugin.paragraph_generator():
-            paragraph = paragraph.strip()
-            if len(paragraph) == 0:
-                continue
-            if skip > 0:
-                skip -= 1
-                continue
-            stats = run_paragraph_exercise(win, paragraph)
-            stats_per_paragraph.append(stats)
-            win.addstr('Press <ENTER> to continue...')
-            win.refresh()
-            win.getstr()
+        try:
+            for paragraph in selected_plugin.paragraph_generator():
+                paragraph = paragraph.strip()
+                if len(paragraph) == 0:
+                    continue
+                if skip > 0:
+                    skip -= 1
+                    continue
+                stats = run_paragraph_exercise(win, paragraph)
+                stats_per_paragraph.append(stats)
+                win.addstr('Press <ENTER> to continue...')
+                win.refresh()
+                win.getstr()
+        except KeyboardInterrupt:
+            curses.flushinp()
+
+        win.clear()
+        win.addstr('Congratulations! Your exercise is done.\n\n')
+
+        aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
+        win.addstr(render_aggregate_stats_as_list(aggregate_stats))
+        win.refresh()
+
+        time.sleep(1)
+        curses.flushinp()
+        win.addstr('\nPress <ENTER> to continue...')
+        win.getstr()
 
     except KeyboardInterrupt:
-        curses.flushinp()
-
-    win.clear()
-    win.addstr('Congratulations! Your exercise is done.\n\n')
-
-    aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
-    win.addstr(render_aggregate_stats_as_list(aggregate_stats))
-    win.refresh()
-
-    time.sleep(1)
-    curses.flushinp()
-    win.addstr('\nPress <ENTER> to continue...')
-    win.getstr()
-
-    return aggregate_stats
+        pass
+    finally:
+        return aggregate_stats
 
     
 def main():
@@ -186,14 +189,15 @@ def main():
         plugin.configure_argparse_subparser(plugin_parser)
         plugin_parser.set_defaults(plugin=plugin)
     args = parser.parse_args()
-
     selected_plugin = args.plugin(args)
 
     aggregate_stats = curses.wrapper(curses_app, selected_plugin, skip=args.skip)
 
-    if aggregate_stats["total_paragraphs"] > 0:
+    if aggregate_stats and aggregate_stats["total_paragraphs"] > 0:
         last_written_paragraph_index = aggregate_stats["total_paragraphs"] + args.skip
-        print(f'Last paragraph written was the {ordinal(last_written_paragraph_index)}\n')
+        print(f'Last paragraph written was the {ordinal(last_written_paragraph_index)}.\n')
+    else:
+        print('No paragraphs written.\n')
 
 
 if __name__ == '__main__':
