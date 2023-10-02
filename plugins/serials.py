@@ -21,10 +21,10 @@ class Serials:
         while True:
             paragraph = ''
             for i in range(self.num_words_per_paragraph):
-                if i % 2 == 0 and self.words_file_path:
-                    paragraph += self._generate_serial_number()
-                else:
+                if i % 2 == 1 and self.words_file_path:
                     paragraph += self._word_from_file()
+                else:
+                    paragraph += self._generate_serial_number()
                 paragraph += ' '
             paragraph = paragraph[:-1]
             yield paragraph
