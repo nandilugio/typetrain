@@ -1,6 +1,6 @@
 # TypeTrain
 
-**/!\** Still **alpha!!** changing fast and poorly documented, though useful already.
+⚠️  Still **alpha!!** changing fast and poorly documented, though useful already.
 
 Touch-typing training in the terminal.
 
