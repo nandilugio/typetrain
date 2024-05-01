@@ -66,6 +66,20 @@ def render_aggregate_stats_as_list(agg_stats):
     )
 
 
+def sanitize_text(user_text):
+    # Unicode combining characters take space on the string, but
+    # not on the screen, messing up UI calculations. The line is
+    # then normalized to NFKC. This way we have no combining
+    # characters, and have the resutling combined characters be
+    # the canonical equivalent form, most probably the one the
+    # keyboard/terminal/OS will deliver (untested assumption but
+    # makes sense :p).
+    normalized_text = unicodedata.normalize('NFKC', user_text)
+
+    # Replace characters that are not normally typeable.
+    # TODO: Make this an option? There are weird ways to type these...
+    return normalized_text.translate(str.maketrans("–‘’“”", "-''\"\"")).replace("…", "...")
+
 def run_paragraph_exercise(win, exercise_txt):
     curses.init_pair(10, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(11, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -79,14 +93,7 @@ def run_paragraph_exercise(win, exercise_txt):
         ParagraphState.CHAR_WRONG: curses.color_pair(13),
     }
 
-    # Unicode combining characters take space on the string, but
-    # not on the screen, messing up UI calculations. The line is
-    # then normalized to NFKC. This way we have no combining
-    # characters, and have the resutling combined characters be
-    # the canonical equivalent form, most probably the one the
-    # keyboard/terminal/OS will deliver (untested assumption but
-    # makes sense :p).
-    exercise_txt = unicodedata.normalize('NFKC', exercise_txt)
+    exercise_txt = sanitize_text(exercise_txt)
 
     # Draw the initial state of the screen
     # TODO: Wrap text by words (not by characters)
