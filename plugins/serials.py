@@ -1,6 +1,7 @@
 import random
 import string
 
+
 class Serials:
     one_word_name = 'serials'
     description = 'practice typing random serial numbers'

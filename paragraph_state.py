@@ -4,7 +4,7 @@ import time
 
 class ParagraphState:
     
-    class CannotGoBack(RuntimeError): pass
+    class AlreadyAtBeggining(RuntimeError): pass
 
     CHAR_PENDING = 'p'
     CHAR_CORRECT = 'c'
@@ -53,7 +53,7 @@ class ParagraphState:
 
     def register_backspace(self):
         if self.current_char_idx == 0:
-            raise self.CannotGoBack()
+            raise self.AlreadyAtBeggining()
 
         self.current_char_idx -= 1
         deleted_char = self.exercise_txt[self.current_char_idx]
@@ -64,6 +64,12 @@ class ParagraphState:
     def is_exercise_done(self):
         return self.end_time is not None
     
+
+    # TODO: Decouple stats from ParagraphState? it'd make sense to leave this
+    #   module only dealing with the character states and leave any timing
+    #   for a separate stats module. It can use the ParagraphState to ask
+    #   for length, error count, etc.
+
 
     # Formulas from https://www.speedtypingonline.com/typing-equations
     def stats(self):
@@ -94,7 +100,8 @@ class ParagraphState:
             'result_accuracy': result_accuracy,
             'real_accuracy': real_accuracy,
         }
-    
+
+
     # Formulas from https://www.speedtypingonline.com/typing-equations
     @staticmethod
     def aggregate_multiple_stats(stats_list):

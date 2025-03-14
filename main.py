@@ -20,28 +20,33 @@ def update_stats_heading(win, stats):
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
     HEADER_COLORS = curses.color_pair(1)
     
-    current_position = list(win.getyx())
+    initial_position = list(win.getyx())
     _, win_width = win.getmaxyx()
 
+    # Calculate spacing according to the win size
     # Labels, values and minimum spacing takes 5+9 + 10+11 + 10+4 = 49 characters
     spacing_between_fields = (win_width - 49) // 2
     wpm_val_ljustify_len = 9 + spacing_between_fields
     accuracy_val_ljustify_len = 11 + spacing_between_fields
     progress_val_ljustify_len = 4
 
+    # Add labels to the top
     win.addstr(0, 0, 'WPM:'.ljust(5 + wpm_val_ljustify_len) + \
         'Accuracy:'.ljust(10 + accuracy_val_ljustify_len) + \
         'Progress:', HEADER_COLORS)
 
+    # More spacing calculation, specific for values
     wpm_start_x = 5
     accuracy_starts_x = wpm_start_x + wpm_val_ljustify_len + 10
     progress_starts_x = accuracy_starts_x + accuracy_val_ljustify_len + 10
 
+    # Add values to the side of the labels
     win.move(0, 0)
     win.addstr(0, wpm_start_x, f'{stats["net_wpm"]:.0f} ({stats["gross_wpm"]:.0f})'.ljust(wpm_val_ljustify_len))
     win.addstr(0, accuracy_starts_x, f'{stats["result_accuracy"]:.0f}% ({stats["real_accuracy"]:.0f}%)'.ljust(accuracy_val_ljustify_len))
     win.addstr(0, progress_starts_x, f'{stats["progress_pct"]:.0f}%'.ljust(progress_val_ljustify_len))
-    win.move(*current_position)
+
+    win.move(*initial_position)
 
 
 def render_stats_as_list(stats):
@@ -67,18 +72,19 @@ def render_aggregate_stats_as_list(agg_stats):
 
 
 def sanitize_text(user_text):
-    # Unicode combining characters take space on the string, but
-    # not on the screen, messing up UI calculations. The line is
-    # then normalized to NFKC. This way we have no combining
-    # characters, and have the resutling combined characters be
-    # the canonical equivalent form, most probably the one the
-    # keyboard/terminal/OS will deliver (untested assumption but
-    # makes sense :p).
+    # Unicode combining characters take space on the string, but not on the
+    # screen, messing up UI calculations. The line is then normalized to NFKC.
+    # This way we have no combining characters, and have the resulting combined
+    # characters be the canonical equivalent form, most probably the one the
+    # keyboard/terminal/OS will deliver (untested assumption but makes sense :p).
+    # EDIT: Already used the app with different text pulled from different
+    # places of the internet and has not given any problems so far :)
     normalized_text = unicodedata.normalize('NFKC', user_text)
 
-    # Replace characters that are not normally typeable.
+    # Replace characters that are not easily typeable
     # TODO: Make this an option? There are weird ways to type these...
     return normalized_text.translate(str.maketrans("–‘’“”", "-''\"\"")).replace("…", "...")
+
 
 def run_paragraph_exercise(win, exercise_txt):
     curses.init_pair(10, curses.COLOR_CYAN, curses.COLOR_BLACK)
@@ -100,10 +106,10 @@ def run_paragraph_exercise(win, exercise_txt):
     win.clear()
     state = ParagraphState(exercise_txt)
     update_stats_heading(win, state.stats())  # Will be all zeroes
-    win.addstr(2,0, exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
-    win.move(2,0)
+    win.addstr(2, 0, exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
+    win.move(2, 0)
 
-    # Loop to handle keypresses
+    # Loop to handle key-presses
     while not state.is_exercise_done():
         key = win.get_wch()
 
@@ -111,11 +117,12 @@ def run_paragraph_exercise(win, exercise_txt):
         if key in ('\x7f', '\x08'):
             try:
                 deleted_char = state.register_backspace()
-            except ParagraphState.CannotGoBack:
+            except ParagraphState.AlreadyAtBeggining:
                 continue
 
-            # Handle the case where the cursor is at the beginning of a line
             last_position = list(win.getyx())
+
+            # Handle line wrapping going backwards
             if last_position[1] == 0:
                 last_position[0] -= 1
                 last_position[1] = win.getmaxyx()[1] - 1
@@ -130,7 +137,7 @@ def run_paragraph_exercise(win, exercise_txt):
             char_state = state.register_char(key)
             win.addstr(key, COLORS_BY_STATE[char_state]) 
 
-        # Other keypresses produce ints or non-printable strings
+        # Other key-presses produce ints or non-printable strings
         else:
             continue
 
@@ -140,8 +147,9 @@ def run_paragraph_exercise(win, exercise_txt):
     current_position = list(win.getyx())
     win.move(current_position[0] + 2, 0)
 
+    # Display stats
     stats = state.stats()
-    if (stats['all_correct'] ):
+    if stats['all_correct']:
         win.addstr('All correct!')
     else:
         win.addstr('Errors have been made...')
@@ -153,6 +161,9 @@ def run_paragraph_exercise(win, exercise_txt):
 def curses_app(win, selected_plugin, skip):
     stats_per_paragraph = []
     try:
+
+        # Pull paragraphs (exercises content) from the selected plugin. Then
+        # for each of them run the exercise and store the resulting stats
         try:
             for paragraph in selected_plugin.paragraph_generator():
                 paragraph = paragraph.strip()
@@ -168,6 +179,8 @@ def curses_app(win, selected_plugin, skip):
                 win.getstr()
         except KeyboardInterrupt:
             curses.flushinp()
+
+        # After finishing or hitting Ctrl+C, show the aggregate stats and exit
 
         win.clear()
         win.addstr('Congratulations! Your exercise is done.\n\n')
@@ -188,18 +201,27 @@ def curses_app(win, selected_plugin, skip):
 
     
 def main():
+
+    # Main CLI argument parser setup
     parser = argparse.ArgumentParser(prog='typetrain', description='Practice some typing with the TypeTrain!')
     parser.add_argument('--skip', type=int, default=0, help='skip the first N paragraphs')
+
+    # CLI argument sub-parsers setup for plugins
     subparsers = parser.add_subparsers(required=True, title='exercise types', dest='exercise_type') # TODO restrict, using `choices`?
     for plugin in get_plugins():
         plugin_parser = subparsers.add_parser(plugin.one_word_name, help=plugin.description)
         plugin.configure_argparse_subparser(plugin_parser)
         plugin_parser.set_defaults(plugin=plugin)
+
+    # Run argument parser
     args = parser.parse_args()
     selected_plugin = args.plugin(args)
 
+    # Run the app
     aggregate_stats = curses.wrapper(curses_app, selected_plugin, skip=args.skip)
 
+    # Report last paragraph written before exit (outside curses) to easily
+    # continue the exercise in a future run
     if aggregate_stats and aggregate_stats["total_paragraphs"] > 0:
         last_written_paragraph_index = aggregate_stats["total_paragraphs"] + args.skip
         print(f'Last paragraph written was the {ordinal(last_written_paragraph_index)}.\n')
