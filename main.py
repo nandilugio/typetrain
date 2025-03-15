@@ -1,5 +1,6 @@
 import argparse
 import curses
+import textwrap
 import time
 import unicodedata
 
@@ -102,11 +103,23 @@ def run_paragraph_exercise(win, exercise_txt):
     exercise_txt = sanitize_text(exercise_txt)
 
     # Draw the initial state of the screen
-    # TODO: Wrap text by words (not by characters)
     win.clear()
     state = ParagraphState(exercise_txt)
     update_stats_heading(win, state.stats())  # Will be all zeroes
-    win.addstr(2, 0, exercise_txt, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
+
+    # Get window dimensions
+    max_y, max_x = win.getmaxyx()
+    max_x -= 1  # Adjust for border
+
+    # Split text into lines and wrap by words
+    lines = exercise_txt.split('\n')
+    wrapped_lines = []
+    for line in lines:
+        wrapped_lines.extend(textwrap.wrap(line, width=max_x))
+
+    # Display the wrapped text
+    for i, line in enumerate(wrapped_lines):
+        win.addstr(i + 2, 0, line, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
     win.move(2, 0)
 
     # Loop to handle key-presses
@@ -125,17 +138,19 @@ def run_paragraph_exercise(win, exercise_txt):
             # Handle line wrapping going backwards
             if last_position[1] == 0:
                 last_position[0] -= 1
-                last_position[1] = win.getmaxyx()[1] - 1
+                last_position[1] = len(lines[last_position[0] - 2])
             else:
                 last_position[1] -= 1
 
             win.addstr(*last_position, deleted_char, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
             win.move(*last_position)
 
-        # Handle regular printable character
-        elif type(key) == str and key.isprintable():
+        # Handle regular printable characters and newlines (enter key)
+        elif (type(key) == str and key.isprintable()) or key == '\n':
             char_state = state.register_char(key)
-            win.addstr(key, COLORS_BY_STATE[char_state]) 
+            if key == '\n' and char_state == ParagraphState.CHAR_WRONG:
+                key = '↵'
+            win.addstr(key, COLORS_BY_STATE[char_state])
 
         # Other key-presses produce ints or non-printable strings
         else:
