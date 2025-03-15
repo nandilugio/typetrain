@@ -19,8 +19,13 @@ class Song:
         with open(self.path, 'r') as f:
             contiguous_lines = []
             while line := f.readline():
-                if line.strip() == '': 
+                line = line.strip()
+                if line:
+                    contiguous_lines.append(line)
+                elif contiguous_lines:
                     yield "\n".join(contiguous_lines)
+                    contiguous_lines = []
                 else:
-                    contiguous_lines += line
-            yield "\n".join(contiguous_lines)
+                    continue
+            if contiguous_lines:
+                yield "\n".join(contiguous_lines)
