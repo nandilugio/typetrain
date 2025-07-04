@@ -20,7 +20,7 @@ def ordinal(n):
 def update_stats_heading(win, stats):
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
     HEADER_COLORS = curses.color_pair(1)
-    
+
     initial_position = list(win.getyx())
     _, win_width = win.getmaxyx()
 
@@ -214,7 +214,7 @@ def curses_app(win, selected_plugin, skip):
     finally:
         return aggregate_stats
 
-    
+
 def main():
 
     # Main CLI argument parser setup
