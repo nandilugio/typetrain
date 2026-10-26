@@ -195,32 +195,31 @@ def run_paragraph_exercise(win, exercise_txt):
 
 def curses_app(win, selected_plugin, skip):
     stats_per_paragraph = []
+
+    # Pull paragraphs (exercises content) from the selected plugin. Then
+    # for each of them run the exercise and store the resulting stats
     try:
+        for paragraph in selected_plugin.paragraph_generator():
+            paragraph = paragraph.strip()
+            if len(paragraph) == 0:
+                continue
+            if skip > 0:
+                skip -= 1
+                continue
+            stats = run_paragraph_exercise(win, paragraph)
+            stats_per_paragraph.append(stats)
+            win.addstr('Press <ENTER> to continue...')
+            win.refresh()
+            win.getstr()
+    except KeyboardInterrupt:
+        curses.flushinp()
 
-        # Pull paragraphs (exercises content) from the selected plugin. Then
-        # for each of them run the exercise and store the resulting stats
-        try:
-            for paragraph in selected_plugin.paragraph_generator():
-                paragraph = paragraph.strip()
-                if len(paragraph) == 0:
-                    continue
-                if skip > 0:
-                    skip -= 1
-                    continue
-                stats = run_paragraph_exercise(win, paragraph)
-                stats_per_paragraph.append(stats)
-                win.addstr('Press <ENTER> to continue...')
-                win.refresh()
-                win.getstr()
-        except KeyboardInterrupt:
-            curses.flushinp()
+    aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
 
-        # After finishing or hitting Ctrl+C, show the aggregate stats and exit
-
+    # After finishing or hitting Ctrl+C, show the aggregate stats and exit
+    try:
         win.clear()
         win.addstr('Congratulations! Your exercise is done.\n\n')
-
-        aggregate_stats = ParagraphState.aggregate_multiple_stats(stats_per_paragraph)
         win.addstr(render_aggregate_stats_as_list(aggregate_stats))
         win.refresh()
 
@@ -228,11 +227,10 @@ def curses_app(win, selected_plugin, skip):
         curses.flushinp()
         win.addstr('\nPress <ENTER> to continue...')
         win.getstr()
-
     except KeyboardInterrupt:
         pass
-    finally:
-        return aggregate_stats
+
+    return aggregate_stats
 
 
 def main():
