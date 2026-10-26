@@ -1,0 +1,4 @@
+# Enable git's built-in funcname patterns, so `git log -L :name:file` can find
+# a definition by name. The patterns ship with git but stay inert until a file
+# is marked as using one.
+*.py diff=python
