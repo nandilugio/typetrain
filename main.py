@@ -126,8 +126,10 @@ def run_paragraph_exercise(win, exercise_txt):
     while not state.is_exercise_done():
         key = win.get_wch()
 
-        # Handle backspace (POSIX, Windows)
-        if key in ('\x7f', '\x08'):
+        # Handle backspace. With keypad mode on (set by curses.wrapper), curses
+        # usually translates it to KEY_BACKSPACE. Raw DEL/BS are kept as a
+        # fallback for terminals whose terminfo doesn't match what they send.
+        if key in (curses.KEY_BACKSPACE, '\x7f', '\x08'):
             try:
                 deleted_char = state.register_backspace()
             except ParagraphState.AlreadyAtBeggining:
