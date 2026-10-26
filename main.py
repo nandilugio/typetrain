@@ -1,6 +1,6 @@
 import argparse
 import curses
-import textwrap
+import re
 import time
 import unicodedata
 
@@ -87,6 +87,31 @@ def sanitize_text(user_text):
     return normalized_text.translate(str.maketrans("–‘’“”", "-''\"\"")).replace("…", "...")
 
 
+def layout_text(text, width):
+    """Word-wrap text to width, returning the (row, col) where each char goes.
+
+    Rows keep a spare column so that the space or newline ending them still
+    has a position of its own (where the user types it). Words that don't fit
+    in a row are split.
+    """
+    positions = []
+    row, col = 0, 0
+    # Each chunk is a word followed by its separator, if any
+    for chunk in re.findall(r'[^ \n]*[ \n]?', text):
+        word_len = len(chunk.rstrip(' \n'))
+        if col > 0 and col + word_len >= width:
+            row, col = row + 1, 0
+        for char in chunk:
+            if col == width:
+                row, col = row + 1, 0
+            positions.append((row, col))
+            if char == '\n':
+                row, col = row + 1, 0
+            else:
+                col += 1
+    return positions
+
+
 def run_paragraph_exercise(win, exercise_txt):
     curses.init_pair(10, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(11, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -102,25 +127,26 @@ def run_paragraph_exercise(win, exercise_txt):
 
     exercise_txt = sanitize_text(exercise_txt)
 
+    TEXT_TOP_ROW = 2
+
+    _, win_width = win.getmaxyx()
+    positions = layout_text(exercise_txt, win_width)
+
+    def draw_char(idx, char, char_state):
+        row, col = positions[idx]
+        win.addstr(TEXT_TOP_ROW + row, col, char, COLORS_BY_STATE[char_state])
+
+    def move_cursor_to(idx):
+        row, col = positions[idx]
+        win.move(TEXT_TOP_ROW + row, col)
+
     # Draw the initial state of the screen
     win.clear()
     state = ParagraphState(exercise_txt)
     update_stats_heading(win, state.stats())  # Will be all zeroes
-
-    # Get window dimensions
-    max_y, max_x = win.getmaxyx()
-    max_x -= 1  # Adjust for border
-
-    # Split text into lines and wrap by words
-    lines = exercise_txt.split('\n')
-    wrapped_lines = []
-    for line in lines:
-        wrapped_lines.extend(textwrap.wrap(line, width=max_x))
-
-    # Display the wrapped text
-    for i, line in enumerate(wrapped_lines):
-        win.addstr(i + 2, 0, line, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
-    win.move(2, 0)
+    for idx, char in enumerate(exercise_txt):
+        draw_char(idx, ' ' if char == '\n' else char, ParagraphState.CHAR_PENDING)
+    move_cursor_to(0)
 
     # Loop to handle key-presses
     while not state.is_exercise_done():
@@ -134,35 +160,27 @@ def run_paragraph_exercise(win, exercise_txt):
                 deleted_char = state.register_backspace()
             except ParagraphState.AlreadyAtBeggining:
                 continue
-
-            last_position = list(win.getyx())
-
-            # Handle line wrapping going backwards
-            if last_position[1] == 0:
-                last_position[0] -= 1
-                last_position[1] = len(lines[last_position[0] - 2])
-            else:
-                last_position[1] -= 1
-
-            win.addstr(*last_position, deleted_char, COLORS_BY_STATE[ParagraphState.CHAR_PENDING])
-            win.move(*last_position)
+            draw_char(state.current_char_idx, ' ' if deleted_char == '\n' else deleted_char, ParagraphState.CHAR_PENDING)
 
         # Handle regular printable characters and newlines (enter key)
         elif (type(key) == str and key.isprintable()) or key == '\n':
+            idx = state.current_char_idx
             char_state = state.register_char(key)
-            if key == '\n' and char_state == ParagraphState.CHAR_WRONG:
-                key = '↵'
-            win.addstr(key, COLORS_BY_STATE[char_state])
+            if key == '\n':
+                key = '↵' if char_state == ParagraphState.CHAR_WRONG else ' '
+            draw_char(idx, key, char_state)
 
         # Other key-presses produce ints or non-printable strings
         else:
             continue
 
+        if not state.is_exercise_done():
+            move_cursor_to(state.current_char_idx)
         update_stats_heading(win, state.stats())
 
     # Exercise done. Move below text to display stats
-    current_position = list(win.getyx())
-    win.move(current_position[0] + 2, 0)
+    last_text_row, _ = positions[-1]
+    win.move(TEXT_TOP_ROW + last_text_row + 2, 0)
 
     # Display stats
     stats = state.stats()
